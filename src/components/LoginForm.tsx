@@ -19,6 +19,10 @@ const LoginForm = () => {
     // Here you would typically handle the login logic
   };
 
+  const handleRememberMeChange = (checked: boolean | 'indeterminate') => {
+    setRememberMe(checked === true);
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg border-0 bg-white/95 backdrop-blur-sm">
       <CardHeader className="space-y-1 text-center pb-6">
@@ -75,7 +79,7 @@ const LoginForm = () => {
               <Checkbox 
                 id="remember" 
                 checked={rememberMe}
-                onCheckedChange={setRememberMe}
+                onCheckedChange={handleRememberMeChange}
               />
               <Label htmlFor="remember" className="text-sm text-slate-600">
                 Remember me
