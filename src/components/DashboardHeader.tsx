@@ -8,20 +8,19 @@ const DashboardHeader = ({ userName }: DashboardHeaderProps) => {
   const netBalance = 120.5 - 681.0;
 
   return (
-    // Make the header take full width
-    <div className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-purple-700 text-white p-6 pb-8 rounded-b-3xl shadow-lg lg:rounded-none lg:p-8 lg:pb-12">
+    <div className="w-screen bg-gradient-to-r from-purple-600 via-blue-600 to-purple-700 text-white p-6 pb-8 shadow-lg z-10">
       {/* Top row: Welcome message and user initial circle */}
       <div className="flex items-center justify-between mb-6 px-4 lg:px-16">
         <div>
           <h1 className="text-2xl font-bold mb-1 lg:text-4xl">Hi {userName},</h1>
-          <p className="text-purple-100 text-sm lg:text-base">welcome back to SplitEase</p>
+          <p className="text-purple-100 text-sm lg:text-base">Welcome back to SplitEase</p>
         </div>
         <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center lg:w-16 lg:h-16">
           <span className="text-lg font-semibold lg:text-2xl">{userName.charAt(0)}</span>
         </div>
       </div>
 
-      {/* Net Balance Card - integrated directly into the header */}
+      {/* Net Balance Card */}
       <div className="bg-white/20 rounded-2xl p-6 backdrop-blur-sm mx-4 lg:mx-16">
         <div className="text-center">
           <p className="text-sm text-purple-100 mb-2 lg:text-base">Your Net Balance</p>
@@ -38,3 +37,4 @@ const DashboardHeader = ({ userName }: DashboardHeaderProps) => {
 };
 
 export default DashboardHeader;
+

@@ -223,13 +223,25 @@ const LoginForm = () => {
         {!isSignup && (
           <div className="pt-2">
             <Button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="w-full h-11 bg-red-500 hover:bg-red-600 text-white font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-              disabled={loading}
-            >
-              Sign in with Google
-            </Button>
+  type="button"
+  onClick={handleGoogleLogin}
+  className="w-full h-11 bg-white border border-gray-300 hover:shadow-md flex items-center justify-center space-x-3 text-sm font-medium text-gray-700 transition-all duration-200"
+  disabled={loading}
+>
+  {loading ? (
+    <Loader2 className="w-4 h-4 animate-spin" />
+  ) : (
+    <>
+      <img
+        src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+        alt="Google"
+        className="w-5 h-5"
+      />
+      <span>Continue with Google</span>
+    </>
+  )}
+</Button>
+
           </div>
         )}
 

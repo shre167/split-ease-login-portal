@@ -6,11 +6,13 @@ import FinanceCards from './FinanceCards';
 
 const Dashboard = () => {
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header includes Logout and Profile */}
-        <DashboardHeader userName="Shreya" />
+    <div className="min-h-screen bg-gray-100 pb-20">
+      
+      {/* Full-width header outside the container */}
+      <DashboardHeader userName="Shreya" />
 
+      {/* Main content container with margin to avoid overlap */}
+      <div className="max-w-4xl mx-auto px-4 mt-[40px]">
         {/* Finance Overview Cards */}
         <FinanceCards />
 
@@ -29,3 +31,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

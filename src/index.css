@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
+/* index.css */
+body {
+  margin: 0;
+  padding: 0;
+}
 
 @layer base {
   :root {

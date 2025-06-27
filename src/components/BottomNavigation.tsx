@@ -10,12 +10,12 @@ const BottomNavigation = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);       // ✅ Firebase sign-out
-      navigate('/login');        // ✅ Redirect after logout
+      navigate('/');        // ✅ Redirect after logout
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
-
+  
   return (
     <nav className="fixed bottom-0 left-0 w-full bg-white shadow-md border-t px-4 py-2 flex justify-around items-center z-50">
       <button onClick={() => navigate('/home')} className="flex flex-col items-center text-sm text-gray-600 hover:text-purple-600">
