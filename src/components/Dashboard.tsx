@@ -14,12 +14,11 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 import AIAssistant from './AiAssisstant';
 import BottomNavigation from './BottomNavigation';
 import DashboardHeader from './DashboardHeader';
-
-// Removed FinanceCards since static groups were shown there
 
 type Group = {
   id: string;
@@ -39,21 +38,37 @@ const Dashboard = () => {
   const [inviteInput, setInviteInput] = useState('');
   const [userEmail, setUserEmail] = useState<string>('');
 
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       const identifier = user?.email || user?.phoneNumber;
       if (identifier) {
         setUserEmail(identifier);
-        const q = query(collection(db, 'groups'), where('members', 'array-contains', identifier));
-        const unsubscribeGroups = onSnapshot(q, (snapshot) => {
-          const userGroups = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Group[];
-          setGroups(userGroups);
-        });
-        return () => unsubscribeGroups();
       }
     });
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+  if (!userEmail) return; // 🔒 Prevent invalid Firestore query
+
+  const q = query(
+    collection(db, 'groups'),
+    where('members', 'array-contains', userEmail)
+  );
+
+  const unsubscribeGroups = onSnapshot(q, (snapshot) => {
+    const userGroups = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Group[];
+    setGroups(userGroups);
+  });
+
+  return () => unsubscribeGroups(); // ✅ Clean up listener
+}, [userEmail]); // 🔁 Re-run when email is ready
+
 
   const generateGroupCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -146,7 +161,8 @@ const Dashboard = () => {
             {groups.map((group) => (
               <div
                 key={group.id}
-                className="bg-white p-4 rounded-xl shadow flex justify-between items-center"
+                onClick={() => navigate(`/group/${group.id}`)}
+                className="bg-white p-4 rounded-xl shadow flex justify-between items-center cursor-pointer hover:bg-gray-50 transition"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-lg">
@@ -160,11 +176,18 @@ const Dashboard = () => {
 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className={`font-semibold text-md text-gray-800`}>$ {Math.abs(group.balance).toFixed(2)}</p>
-                    <p className="text-sm text-gray-500">{group.balance >= 0 ? 'you are owed' : 'you owe'}</p>
+                    <p className="font-semibold text-md text-gray-800">
+                      ₹{Math.abs(group.balance).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {group.balance >= 0 ? 'you are owed' : 'you owe'}
+                    </p>
                   </div>
                   <button
-                    onClick={() => setInviteModalGroup(group)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // prevent navigating when plus icon is clicked
+                      setInviteModalGroup(group);
+                    }}
                     className="text-gray-600 hover:text-black"
                   >
                     <Plus />
@@ -258,8 +281,12 @@ const Dashboard = () => {
               &times;
             </button>
             <h2 className="text-xl font-bold mb-4 text-center">Invite to {inviteModalGroup.name}</h2>
-            <p className="text-sm text-gray-600 mb-2">Invite Code: <strong>{inviteModalGroup.code}</strong></p>
-            <p className="text-sm text-gray-600 mb-4">Invite Link: <strong>https://splitease.app/join/{inviteModalGroup.code}</strong></p>
+            <p className="text-sm text-gray-600 mb-2">
+              Invite Code: <strong>{inviteModalGroup.code}</strong>
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Invite Link: <strong>https://splitease.app/join/{inviteModalGroup.code}</strong>
+            </p>
             <input
               type="text"
               value={inviteInput}
@@ -281,5 +308,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
 

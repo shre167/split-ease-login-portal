@@ -3,18 +3,18 @@ import { Home, Users, QrCode, User, LogOut, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
+import jsQR from 'jsqr';
+import Payments from '@/components/Payments/PaymentHistory';
 
 const BottomNavigation = () => {
   const navigate = useNavigate();
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const videoRef = useRef(null);
-  const codeReader = useRef(new BrowserQRCodeReader());
   const [error, setError] = useState(null);
   const [uploadedImageSrc, setUploadedImageSrc] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [activeTab, setActiveTab] = useState('camera'); // 'camera' or 'upload'
+  const [activeTab, setActiveTab] = useState('camera');
 
   const handleLogout = async () => {
     try {
@@ -32,20 +32,22 @@ const BottomNavigation = () => {
     setScanResult(data);
     stopScanning();
 
-    try {
-      new URL(data); // Validate URL
+    if (data.startsWith('upi://')) {
       setShowScanner(false);
-      window.open(data, '_blank', 'noopener,noreferrer');
-    } catch {
-      setError(`QR Content: "${data}" (Not a valid URL)`);
+      window.location.href = data;
+    } else {
+      try {
+        const url = new URL(data);
+        setShowScanner(false);
+        window.open(data, '_blank', 'noopener,noreferrer');
+      } catch {
+        setError(`QR Content: "${data}" (Not a valid URL or UPI link)`);
+      }
     }
   };
 
   const stopScanning = () => {
-    if (codeReader.current) {
-      codeReader.current.reset();
-      setIsScanning(false);
-    }
+    setIsScanning(false);
     if (videoRef.current?.srcObject) {
       videoRef.current.srcObject.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
@@ -57,13 +59,6 @@ const BottomNavigation = () => {
       setError(null);
       setIsScanning(true);
       setUploadedImageSrc(null);
-      
-      const devices = await codeReader.current.listVideoInputDevices();
-      if (!devices || devices.length === 0) {
-        setError('No camera found. Please connect a camera.');
-        setIsScanning(false);
-        return;
-      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -73,23 +68,31 @@ const BottomNavigation = () => {
         }
       });
 
+      if (!videoRef.current) return;
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
 
-      const decodeCallback = (result, err) => {
-        if (result) {
-          handleScanResult(result.text);
-        }
-        if (err && !(err instanceof NotFoundException)) {
-          console.error('Scan error:', err);
-          setError('Scanning error. Please try again.');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const scan = () => {
+        if (!videoRef.current || !ctx) return;
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+        if (code) {
+          handleScanResult(code.data);
+        } else if (isScanning) {
+          requestAnimationFrame(scan);
         }
       };
 
-      codeReader.current.decodeFromVideoElement(videoRef.current, decodeCallback);
+      requestAnimationFrame(scan);
     } catch (e) {
       console.error('Camera error:', e);
-      setError(e.message.includes('permission') 
+      setError(e.message.includes('permission')
         ? 'Camera permission denied. Please allow camera access.'
         : 'Failed to access camera. Please try again.');
       setIsScanning(false);
@@ -117,29 +120,29 @@ const BottomNavigation = () => {
     stopScanning();
     setActiveTab('upload');
 
-    try {
-      const imageUrl = URL.createObjectURL(file);
-      setUploadedImageSrc(imageUrl);
-
+    const reader = new FileReader();
+    reader.onload = (event) => {
       const img = new Image();
-      img.src = imageUrl;
-      
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = () => reject(new Error('Failed to load image'));
-      });
-
-      const result = await codeReader.current.decodeFromImageElement(img);
-      handleScanResult(result.text);
-    } catch (decodeErr) {
-      console.error('Decode error:', decodeErr);
-      setError(decodeErr instanceof NotFoundException
-        ? 'No QR code found in image. Try another.'
-        : 'Failed to decode QR code.');
-    } finally {
-      if (uploadedImageSrc) URL.revokeObjectURL(uploadedImageSrc);
-      setUploadedImageSrc(null);
-    }
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return setError('Canvas error.');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+        if (code && code.data) {
+          handleScanResult(code.data);
+        } else {
+          setError('No QR code found in image. Try another screenshot.');
+        }
+      };
+      img.onerror = () => setError('Failed to load image.');
+      img.src = event.target?.result;
+      setUploadedImageSrc(event.target?.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const closeScanner = () => {
@@ -158,7 +161,6 @@ const BottomNavigation = () => {
 
   return (
     <>
-      {/* QR Scanner Overlay */}
       {showScanner && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-50">
           <div className="bg-white p-4 rounded-lg shadow-lg w-11/12 max-w-sm relative">
@@ -170,8 +172,7 @@ const BottomNavigation = () => {
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-lg font-semibold text-center mb-2">Scan QR Code</h2>
-            
-            {/* Tab Selector */}
+
             <div className="flex mb-4 border-b">
               <button
                 className={`flex-1 py-2 font-medium ${activeTab === 'camera' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
@@ -186,15 +187,15 @@ const BottomNavigation = () => {
                 Upload Image
               </button>
             </div>
-            
+
             {error && (
               <p className="text-red-500 text-center text-sm mb-4">{error}</p>
             )}
-            
+
             {scanResult && !error && (
               <p className="text-green-600 text-center text-sm mb-4">
-                Detected: {scanResult.length > 30 
-                  ? `${scanResult.substring(0, 30)}...` 
+                Detected: {scanResult.length > 30
+                  ? `${scanResult.substring(0, 30)}...`
                   : scanResult}
               </p>
             )}
@@ -202,32 +203,32 @@ const BottomNavigation = () => {
             {activeTab === 'upload' ? (
               <>
                 {uploadedImageSrc ? (
-                  <img 
-                    src={uploadedImageSrc} 
-                    alt="Uploaded QR Code" 
-                    className="w-full rounded border border-gray-300 max-h-64 object-contain" 
+                  <img
+                    src={uploadedImageSrc}
+                    alt="Uploaded QR Code"
+                    className="w-full rounded border border-gray-300 max-h-64 object-contain"
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg">
                     <label className="cursor-pointer text-blue-600 underline text-sm hover:text-blue-800">
                       Click to upload QR code image
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleImageUpload} 
-                        className="hidden" 
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
                       />
                     </label>
                   </div>
                 )}
               </>
             ) : (
-              <video 
-                ref={videoRef} 
-                className="w-full rounded border border-gray-300 max-h-64 object-contain" 
-                autoPlay 
-                muted 
-                playsInline 
+              <video
+                ref={videoRef}
+                className="w-full rounded border border-gray-300 max-h-64 object-contain"
+                autoPlay
+                muted
+                playsInline
               />
             )}
 
@@ -240,14 +241,13 @@ const BottomNavigation = () => {
         </div>
       )}
 
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 w-full bg-white shadow-lg border-t px-4 py-2 flex justify-around items-center z-40">
-        <button onClick={() => navigate('/home')} className="flex flex-col items-center text-sm text-gray-600 hover:text-purple-600 transition-colors">
+        <button onClick={() => navigate('/Dashboard')} className="flex flex-col items-center text-sm text-gray-600 hover:text-purple-600 transition-colors">
           <Home className="w-5 h-5 mb-1" /> Home
         </button>
 
-        <button onClick={() => navigate('/groups')} className="flex flex-col items-center text-sm text-gray-600 hover:text-purple-600 transition-colors">
-          <Users className="w-5 h-5 mb-1" /> Groups
+        <button onClick={() => navigate('/Payments')} className="flex flex-col items-center text-sm text-gray-600 hover:text-purple-600 transition-colors">
+          <Users className="w-5 h-5 mb-1" /> My Payments
         </button>
 
         <button
