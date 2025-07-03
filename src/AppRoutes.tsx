@@ -7,6 +7,8 @@ import DashboardPage from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import QRScanner from "./pages/QRScanner";
+import CreateGroup from './pages/CreateGroup';
+import JoinGroup from './pages/JoinGroup';
 
 const AppRoutes = () => {
   const { user } = useAuth();
@@ -37,12 +39,23 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/groups/create" element={<CreateGroup />} />
+
+      <Route
+        path="/groups/join"
+        element={
+          <ProtectedRoute>
+            <JoinGroup />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
 
 export default AppRoutes;
+
 
 
 
