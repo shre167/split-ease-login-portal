@@ -1,3 +1,5 @@
+// src/pages/Dashboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -20,6 +22,7 @@ import AIAssistant from './AiAssisstant';
 import BottomNavigation from './BottomNavigation';
 import DashboardHeader from './DashboardHeader';
 import UpiQRModal from '@/pages/UpiQRModal';
+import FinanceCards from './FinanceCards';
 
 type Group = {
   id: string;
@@ -38,16 +41,14 @@ const Dashboard = () => {
   const [inviteModalGroup, setInviteModalGroup] = useState<Group | null>(null);
   const [inviteInput, setInviteInput] = useState('');
   const [userEmail, setUserEmail] = useState<string>('');
-  const [showModal, setShowModal] = useState(false); // QR Modal
+  const [showModal, setShowModal] = useState(false);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       const identifier = user?.email || user?.phoneNumber;
-      if (identifier) {
-        setUserEmail(identifier);
-      }
+      if (identifier) setUserEmail(identifier);
     });
     return () => unsubscribe();
   }, []);
@@ -71,27 +72,25 @@ const Dashboard = () => {
     return () => unsubscribeGroups();
   }, [userEmail]);
 
-  const generateGroupCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  };
+  const totalOwe = groups
+    .map((g) => (g.balance < 0 ? g.balance : 0))
+    .reduce((acc, val) => acc + val, 0);
+  const totalOwed = groups
+    .map((g) => (g.balance > 0 ? g.balance : 0))
+    .reduce((acc, val) => acc + val, 0);
 
   const handleCreateGroup = async () => {
-    if (!groupName.trim()) {
-      alert('Please enter a group name.');
-      return;
-    }
+    if (!groupName.trim()) return alert('Please enter a group name.');
+    if (!userEmail) return alert('User email not found. Please login again.');
 
-    if (!userEmail) {
-      alert('User email not found. Please login again.');
-      return;
-    }
-
-    const code = generateGroupCode();
-    const name = groupName.trim();
+    const code = Array.from({ length: 6 }, () =>
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[
+        Math.floor(Math.random() * 36)
+      ]
+    ).join('');
 
     const groupData = {
-      name,
+      name: groupName.trim(),
       code,
       balance: 0,
       members: [userEmail],
@@ -99,55 +98,48 @@ const Dashboard = () => {
 
     try {
       const docRef = await addDoc(collection(db, 'groups'), groupData);
-      const newGroup: Group = {
-        id: docRef.id,
-        ...groupData,
-      };
       setGroupName('');
       setIsModalOpen(false);
       setTimeout(() => {
-        setInviteModalGroup(newGroup);
+        setInviteModalGroup({ id: docRef.id, ...groupData });
       }, 200);
-    } catch (error) {
-      console.error('Error creating group:', error);
-      alert('Something went wrong. Please try again.');
+    } catch (err) {
+      alert('Error creating group');
+      console.error(err);
     }
   };
 
   const handleJoinGroup = async () => {
-    const codeTrimmed = joinCode.trim().toUpperCase();
-    const q = query(collection(db, 'groups'), where('code', '==', codeTrimmed));
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      const groupDoc = querySnapshot.docs[0];
-      const groupRef = doc(db, 'groups', groupDoc.id);
-      await updateDoc(groupRef, {
+    const q = query(
+      collection(db, 'groups'),
+      where('code', '==', joinCode.trim().toUpperCase())
+    );
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      await updateDoc(doc(db, 'groups', snapshot.docs[0].id), {
         members: arrayUnion(userEmail),
       });
       setJoinCode('');
       setIsJoinModalOpen(false);
-    } else {
-      alert('Invalid group code.');
-    }
+    } else alert('Invalid group code.');
   };
 
   const handleAddMember = async () => {
     if (!inviteModalGroup || !inviteInput.trim()) return;
-    const groupRef = doc(db, 'groups', inviteModalGroup.id);
-    await updateDoc(groupRef, {
+    await updateDoc(doc(db, 'groups', inviteModalGroup.id), {
       members: arrayUnion(inviteInput.trim()),
     });
-    setInviteModalGroup(null);
     setInviteInput('');
-    alert('Member added successfully!');
+    setInviteModalGroup(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20">
       <DashboardHeader userName="Shreya" />
+      <div className="max-w-4xl mx-auto px-4 mt-10">
+        <FinanceCards totalOwe={totalOwe} totalOwed={totalOwed} />
 
-      <div className="max-w-4xl mx-auto px-4 mt-[40px]">
+        {/* Group List */}
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Your Groups</h2>
@@ -162,15 +154,12 @@ const Dashboard = () => {
                 className="bg-white p-4 rounded-xl shadow flex justify-between items-center cursor-pointer hover:bg-gray-50 transition"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-lg">
-                    👥
-                  </div>
+                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-lg">👥</div>
                   <div>
                     <p className="font-semibold">{group.name}</p>
                     <p className="text-sm text-gray-500">{group.members.length} members</p>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="font-semibold text-md text-gray-800">
@@ -202,42 +191,30 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        
-
         <div className="my-8">
           <AIAssistant />
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full">
-        <BottomNavigation />
-      </div>
-
-      {/* ✅ QR Modal */}
+      <BottomNavigation />
       <UpiQRModal isOpen={showModal} onClose={() => setShowModal(false)} />
 
+      {/* Modals */}
       {/* Create Group Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md relative">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-3 right-4 text-gray-500 hover:text-black text-xl"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-center">Create New Group</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full relative">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black">&times;</button>
+            <h2 className="text-xl font-bold mb-4 text-center">Create Group</h2>
             <input
               type="text"
+              className="w-full border p-2 rounded mb-4"
+              placeholder="Group name"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Enter group name"
-              className="w-full border border-gray-300 p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
               <Button onClick={handleCreateGroup}>Create</Button>
             </div>
           </div>
@@ -246,61 +223,43 @@ const Dashboard = () => {
 
       {/* Join Group Modal */}
       {isJoinModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md relative">
-            <button
-              onClick={() => setIsJoinModalOpen(false)}
-              className="absolute top-3 right-4 text-gray-500 hover:text-black text-xl"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-center">Join a Group</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full relative">
+            <button onClick={() => setIsJoinModalOpen(false)} className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black">&times;</button>
+            <h2 className="text-xl font-bold mb-4 text-center">Join Group</h2>
             <input
               type="text"
+              className="w-full border p-2 rounded mb-4 uppercase"
+              placeholder="Group code"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
-              placeholder="Enter group code"
-              className="w-full border border-gray-300 p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsJoinModalOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => setIsJoinModalOpen(false)}>Cancel</Button>
               <Button onClick={handleJoinGroup}>Join</Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Invite Modal */}
+      {/* Invite Member Modal */}
       {inviteModalGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md relative">
-            <button
-              onClick={() => setInviteModalGroup(null)}
-              className="absolute top-3 right-4 text-gray-500 hover:text-black text-xl"
-            >
-              &times;
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full relative">
+            <button onClick={() => setInviteModalGroup(null)} className="absolute top-3 right-4 text-xl text-gray-600 hover:text-black">&times;</button>
             <h2 className="text-xl font-bold mb-4 text-center">Invite to {inviteModalGroup.name}</h2>
-            <p className="text-sm text-gray-600 mb-2">
-              Invite Code: <strong>{inviteModalGroup.code}</strong>
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              Invite Link: <strong>https://splitease.app/join/{inviteModalGroup.code}</strong>
-            </p>
+            <p className="text-sm mb-1">Invite Code: <strong>{inviteModalGroup.code}</strong></p>
+            <p className="text-sm mb-4">Link: <strong>https://splitease.app/join/{inviteModalGroup.code}</strong></p>
             <input
               type="text"
+              className="w-full border p-2 rounded mb-4"
+              placeholder="Email or Phone"
               value={inviteInput}
               onChange={(e) => setInviteInput(e.target.value)}
-              placeholder="Email or Mobile Number"
-              className="w-full border border-gray-300 p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setInviteModalGroup(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddMember}>Add Member</Button>
+              <Button variant="outline" onClick={() => setInviteModalGroup(null)}>Cancel</Button>
+              <Button onClick={handleAddMember}>Add</Button>
             </div>
           </div>
         </div>
@@ -310,4 +269,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
