@@ -3,38 +3,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom fonts */
-
-
 body {
   margin: 0;
   padding: 0;
   font-family: 'Manrope', 'Noto Sans', sans-serif;
 }
 
-/* Define all custom properties inside a single @layer base */
+/* ==========================
+   SplitEase Design System
+   ========================== */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Layout Colors */
+    --background: 245 40% 98%;
+    --foreground: 240 10% 15%;
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 15%;
+    --card-glass: 255 255 255 / 0.15;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --popover-foreground: 240 10% 15%;
+
+    /* Primary Gradient Colors */
+    --primary: 255 82% 50%;           /* #5015e6 */
+     --primary-end: 260 70% 60%;       /* A slightly lighter purple for gradient */
+      --primary-glow: 255 82% 80%;      /* Glow version */
+      --primary-foreground: 0 0% 100%;  /* White text */
+
+      --accent: 255 82% 95%;            /* Very light background for subtle accents */
+      --accent-foreground: 255 82% 20%; /* Text over accent */
+
+
+    --secondary: 250 60% 95%;
+    --secondary-foreground: 249 58% 25%;
+
+    --muted: 250 60% 96%;
+    --muted-foreground: 240 10% 45%;
+
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 250 60% 90%;
+    --input: 250 60% 95%;
+    --ring: 249 58% 65%;
+
+    --radius: 1rem;
+
+    /* SplitEase Custom Gradients & Effects */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-end)));
+    --gradient-glow: linear-gradient(135deg, hsl(var(--primary-glow)), hsl(var(--accent)));
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+
+    /* Shadows */
+    --shadow-glass: 0 8px 32px rgba(100, 102, 244, 0.15);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* Sidebar Theme */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -48,23 +79,35 @@ body {
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
+
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
+    --card-glass: 255 255 255 / 0.05;
+
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
+
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-end: 210 40% 98%;
+    --primary-glow: 249 58% 75%;
+
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
+
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
+
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -84,7 +127,10 @@ body {
   }
 }
 
-/* Custom utility styles */
+/* ======================
+   Custom Utility Classes
+   ====================== */
+
 .gradient-header {
   background: linear-gradient(to right, #5015e6, #7924e0);
   border-bottom-left-radius: 1rem;
@@ -93,9 +139,8 @@ body {
 }
 
 .card-highlight {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255, 255, 255);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
-

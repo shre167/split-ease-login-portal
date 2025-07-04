@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import AIAssistant from './AiAssisstant';
 import BottomNavigation from './BottomNavigation';
 import DashboardHeader from './DashboardHeader';
+import UpiQRModal from '@/pages/UpiQRModal';
 
 type Group = {
   id: string;
@@ -37,6 +38,7 @@ const Dashboard = () => {
   const [inviteModalGroup, setInviteModalGroup] = useState<Group | null>(null);
   const [inviteInput, setInviteInput] = useState('');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [showModal, setShowModal] = useState(false); // QR Modal
 
   const navigate = useNavigate();
 
@@ -51,24 +53,23 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-  if (!userEmail) return; // 🔒 Prevent invalid Firestore query
+    if (!userEmail) return;
 
-  const q = query(
-    collection(db, 'groups'),
-    where('members', 'array-contains', userEmail)
-  );
+    const q = query(
+      collection(db, 'groups'),
+      where('members', 'array-contains', userEmail)
+    );
 
-  const unsubscribeGroups = onSnapshot(q, (snapshot) => {
-    const userGroups = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Group[];
-    setGroups(userGroups);
-  });
+    const unsubscribeGroups = onSnapshot(q, (snapshot) => {
+      const userGroups = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Group[];
+      setGroups(userGroups);
+    });
 
-  return () => unsubscribeGroups(); // ✅ Clean up listener
-}, [userEmail]); // 🔁 Re-run when email is ready
-
+    return () => unsubscribeGroups();
+  }, [userEmail]);
 
   const generateGroupCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -82,7 +83,7 @@ const Dashboard = () => {
     }
 
     if (!userEmail) {
-      alert("User email not found. Please login again.");
+      alert('User email not found. Please login again.');
       return;
     }
 
@@ -98,21 +99,18 @@ const Dashboard = () => {
 
     try {
       const docRef = await addDoc(collection(db, 'groups'), groupData);
-
       const newGroup: Group = {
         id: docRef.id,
         ...groupData,
       };
-
       setGroupName('');
       setIsModalOpen(false);
-
       setTimeout(() => {
         setInviteModalGroup(newGroup);
       }, 200);
     } catch (error) {
-      console.error("Error creating group:", error);
-      alert("Something went wrong. Please try again.");
+      console.error('Error creating group:', error);
+      alert('Something went wrong. Please try again.');
     }
   };
 
@@ -150,7 +148,6 @@ const Dashboard = () => {
       <DashboardHeader userName="Shreya" />
 
       <div className="max-w-4xl mx-auto px-4 mt-[40px]">
-        {/* Group List */}
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Your Groups</h2>
@@ -185,7 +182,7 @@ const Dashboard = () => {
                   </div>
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // prevent navigating when plus icon is clicked
+                      e.stopPropagation();
                       setInviteModalGroup(group);
                     }}
                     className="text-gray-600 hover:text-black"
@@ -205,6 +202,8 @@ const Dashboard = () => {
           </Button>
         </div>
 
+        
+
         <div className="my-8">
           <AIAssistant />
         </div>
@@ -213,6 +212,9 @@ const Dashboard = () => {
       <div className="fixed bottom-0 left-0 w-full">
         <BottomNavigation />
       </div>
+
+      {/* ✅ QR Modal */}
+      <UpiQRModal isOpen={showModal} onClose={() => setShowModal(false)} />
 
       {/* Create Group Modal */}
       {isModalOpen && (

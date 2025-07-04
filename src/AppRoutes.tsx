@@ -10,7 +10,8 @@ import JoinGroup from "./pages/JoinGroup";
 import NotFound from "./pages/NotFound";
 import QRScanner from "./pages/QRScanner";
 import Payments from "./components/Payments/PaymentHistory";
-import GroupDetails from "./pages/GroupDetails"; // ✅ Only this one
+import GroupDetails from "@/components/Groups/GroupDetails"; // ✅ correct Lovable UI
+
 
 const AppRoutes = () => {
   const { user } = useAuth();
